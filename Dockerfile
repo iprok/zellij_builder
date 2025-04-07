@@ -23,8 +23,6 @@ RUN apt-get update && apt-get install -y \
 # Install Rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Install cargo-deb
 RUN cargo install cargo-deb
 
 # Clone source
@@ -35,14 +33,21 @@ RUN git fetch --tags && \
     LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`) && \
     git checkout $LATEST_TAG
 
-# Remove asset references
+# Remove broken assets
 RUN sed -i '/assets\//d' Cargo.toml
 
 # Build .deb
 RUN cargo deb
-RUN mkdir -p /build-output && cp target/debian/*.deb /build-output/
 
-# --- Extract stage ---
-FROM scratch AS export
-COPY --from=builder /build-output /output
 
+# Stage to copy to volume-mounted directory
+FROM debian:bookworm AS export
+
+# Define a mount point for output
+VOLUME /output
+
+# Copy binary source from previous stage
+COPY --from=builder /opt/zellij/target/debian /build-output
+
+# On container start: copy .deb into mounted volume
+CMD cp /build-output/*.deb /output && echo "Copied .deb to /output" && ls -lh /output && bash
