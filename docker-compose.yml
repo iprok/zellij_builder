@@ -1,23 +1,30 @@
 services:
-  zellij-debian:
+  zellij-bookworm:
     build:
       context: .
       dockerfile: Dockerfile
-      target: export
       args:
         BASE_IMAGE: debian:bookworm
-        DISTRO: debian-bookworm
+        DISTRO: bookworm
     volumes:
-      - ./output-debian:/output
+      - ./output-bookworm:/output
 
-  zellij-ubuntu:
+  zellij-noble:
     build:
       context: .
       dockerfile: Dockerfile
-      target: export
       args:
         BASE_IMAGE: ubuntu:24.04
-        DISTRO: ubuntu-24.04
+        DISTRO: noble
     volumes:
-      - ./output-ubuntu:/output
+      - ./output-noble:/output
 
+  zellij-jammy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ubuntu:22.04
+        DISTRO: jammy
+    volumes:
+      - ./output-jammy:/output

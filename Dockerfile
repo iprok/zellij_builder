@@ -1,7 +1,8 @@
 ARG BASE_IMAGE=debian:bookworm
-FROM ${BASE_IMAGE} AS builder
+FROM ${BASE_IMAGE}
 
 ARG DISTRO=unknown
+ENV DISTRO=${DISTRO}
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -20,34 +21,31 @@ RUN apt-get update && apt-get install -y \
     devscripts \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust
+# Install Rust and cargo-deb
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install cargo-deb
 
-# Clone source
+# Clone Zellij
 WORKDIR /opt
 RUN git clone https://github.com/zellij-org/zellij.git
 WORKDIR /opt/zellij
 RUN git fetch --tags && \
-    LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`) && \
+    LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1)) && \
     git checkout $LATEST_TAG
 
-# Remove broken assets
+# Remove broken asset paths
 RUN sed -i '/assets\//d' Cargo.toml
 
 # Build .deb
 RUN cargo deb
 
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Stage to copy to volume-mounted directory
-FROM debian:bookworm AS export
-
-# Define a mount point for output
+# Declare output mount
 VOLUME /output
 
-# Copy binary source from previous stage
-COPY --from=builder /opt/zellij/target/debian /build-output
-
-# On container start: copy .deb into mounted volume
-CMD cp /build-output/*.deb /output && echo "Copied .deb to /output" && ls -lh /output && bash
+# Run logic at startup
+CMD ["/entrypoint.sh"]
