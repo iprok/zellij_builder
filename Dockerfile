@@ -2,7 +2,9 @@ ARG BASE_IMAGE=debian:bookworm
 FROM ${BASE_IMAGE}
 
 ARG DISTRO=unknown
+ARG ZELLIJ_VERSION=""
 ENV DISTRO=${DISTRO}
+ENV ZELLIJ_VERSION=${ZELLIJ_VERSION}
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -26,26 +28,31 @@ RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install cargo-deb
 
-# Clone Zellij
+# Clone Zellij and checkout tag
 WORKDIR /opt
 RUN git clone https://github.com/zellij-org/zellij.git
 WORKDIR /opt/zellij
 RUN git fetch --tags && \
-    LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1)) && \
-    git checkout $LATEST_TAG
+    if [ -n "$ZELLIJ_VERSION" ]; then \
+      echo "🧩 Checking out tag: v$ZELLIJ_VERSION" && \
+      git checkout "tags/v$ZELLIJ_VERSION"; \
+    else \
+      echo "🔎 Detecting latest tag..." && \
+      LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1)) && \
+      echo "✅ Using latest tag: $LATEST_TAG" && \
+      git checkout "$LATEST_TAG"; \
+    fi
 
-# Remove broken asset paths
+# Remove asset paths from Cargo.toml
 RUN sed -i '/assets\//d' Cargo.toml
 
-# Build .deb
+# Build the .deb package
 RUN cargo deb
 
-# Copy entrypoint script
+# Copy entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Declare output mount
+# Declare output mount and run post-build logic
 VOLUME /output
-
-# Run logic at startup
 CMD ["/entrypoint.sh"]
