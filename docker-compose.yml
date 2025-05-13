@@ -31,3 +31,14 @@ services:
         ZELLIJ_VERSION: ${ZELLIJ_VERSION}
     volumes:
       - ./output-jammy:/output
+
+  zellij-plucky:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ubuntu:25.04
+        DISTRO: plucky
+        ZELLIJ_VERSION: ${ZELLIJ_VERSION}
+    volumes:
+      - ./output-plucky:/output

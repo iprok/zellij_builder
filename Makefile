@@ -12,6 +12,9 @@ noble: prepare
 jammy: prepare
 	docker compose up --build zellij-jammy
 
+plucky: prepare
+	docker compose up --build zellij-plucky
+
 prepare:
 	@mkdir -p output-bookworm output-noble output-jammy
 
